@@ -2,101 +2,31 @@
 <html lang="ja">
 <head>
 <meta charset="UTF-8">
-<title>野球ミニゲーム</title>
+<title>3D 野球ゲーム</title>
 
 <style>
 
 body{
 margin:0;
-font-family:sans-serif;
-background:linear-gradient(#87ceeb,#2e8b57);
-text-align:center;
-color:white;
-}
-
-h1{
-margin:10px;
-}
-
-.game{
-width:700px;
-margin:auto;
-background:rgba(0,0,0,0.6);
-padding:20px;
-border-radius:15px;
-}
-
-#field{
-width:640px;
-height:360px;
-margin:auto;
-position:relative;
 overflow:hidden;
-border:4px solid white;
-border-radius:10px;
-background:
-radial-gradient(circle at center bottom,#c2b280 0 60px,transparent 60px),
-linear-gradient(#3cb043,#2e8b57);
+background:#87ceeb;
+font-family:sans-serif;
 }
 
-/* 外野フェンス */
-
-#fence{
+#ui{
 position:absolute;
-top:0;
-width:100%;
-height:70px;
-background:#1c5f33;
-}
-
-/* ボール */
-
-#ball{
-width:16px;
-height:16px;
-background:white;
-border-radius:50%;
-position:absolute;
+top:10px;
 left:10px;
-top:180px;
-}
-
-/* ミートカーソル */
-
-#cursor{
-width:50px;
-height:50px;
-border:3px solid yellow;
-border-radius:50%;
-position:absolute;
-pointer-events:none;
-}
-
-/* スコア */
-
-.scoreboard{
-margin-top:10px;
-font-size:18px;
-}
-
-#result{
-margin-top:10px;
-font-size:22px;
-font-weight:bold;
+color:white;
+background:rgba(0,0,0,0.5);
+padding:10px;
+border-radius:10px;
 }
 
 button{
-margin-top:10px;
-padding:12px 25px;
-font-size:18px;
-border:none;
-border-radius:10px;
-background:#ffd700;
-cursor:pointer;
-}
-
-button:hover{
-background:#ffcc00;
+padding:10px 20px;
+font-size:16px;
+margin-top:5px;
 }
 
 </style>
@@ -104,223 +34,155 @@ background:#ffcc00;
 
 <body>
 
-<h1>⚾ 野球ミニゲーム ⚾</h1>
-
-<div class="game">
-
-<div id="field">
-
-<div id="fence"></div>
-<div id="ball"></div>
-<div id="cursor"></div>
-
+<div id="ui">
+⚾ 3D野球デモ<br>
+<button onclick="swing()">スイング</button><br>
+<span id="result">投球待ち</span>
 </div>
 
-<button onclick="swing()">スイング</button>
-
-<div class="scoreboard">
-
-ヒット: <span id="hits">0</span> |
-アウト: <span id="outs">0</span> |
-打席: <span id="atbat">0</span> |
-打率: <span id="avg">0.000</span>
-
-</div>
-
-<div id="result">ピッチャーが投げるぞ！</div>
-
-</div>
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
 
 <script>
 
-let field=document.getElementById("field")
-let ball=document.getElementById("ball")
-let cursor=document.getElementById("cursor")
+const scene = new THREE.Scene()
 
-let hits=0
-let outs=0
-let atbat=0
+const camera = new THREE.PerspectiveCamera(
+60,
+window.innerWidth/window.innerHeight,
+0.1,
+1000
+)
 
-let posX=10
-let posY=180
-let type=""
+camera.position.set(0,3,8)
 
-let vx=0
-let vy=0
+const renderer = new THREE.WebGLRenderer()
+renderer.setSize(window.innerWidth,window.innerHeight)
+document.body.appendChild(renderer.domElement)
 
-field.addEventListener("mousemove",(e)=>{
+const light = new THREE.DirectionalLight(0xffffff,1)
+light.position.set(5,10,5)
+scene.add(light)
 
-let rect=field.getBoundingClientRect()
+const ambient = new THREE.AmbientLight(0xffffff,0.6)
+scene.add(ambient)
 
-cursor.style.left=(e.clientX-rect.left-25)+"px"
-cursor.style.top=(e.clientY-rect.top-25)+"px"
+/* 地面 */
 
-})
+const groundGeo = new THREE.PlaneGeometry(20,20)
+const groundMat = new THREE.MeshPhongMaterial({color:0x2e8b57})
+const ground = new THREE.Mesh(groundGeo,groundMat)
+
+ground.rotation.x = -Math.PI/2
+scene.add(ground)
+
+/* ボール */
+
+const ballGeo = new THREE.SphereGeometry(0.2,32,32)
+const ballMat = new THREE.MeshPhongMaterial({color:0xffffff})
+
+const ball = new THREE.Mesh(ballGeo,ballMat)
+ball.position.set(0,1,-8)
+
+scene.add(ball)
+
+/* バッター（簡易3Dモデル） */
+
+const bodyGeo = new THREE.BoxGeometry(0.6,1.5,0.4)
+const bodyMat = new THREE.MeshPhongMaterial({color:0x0000ff})
+
+const batterBody = new THREE.Mesh(bodyGeo,bodyMat)
+batterBody.position.set(0,0.8,0)
+
+scene.add(batterBody)
+
+/* 頭 */
+
+const headGeo = new THREE.SphereGeometry(0.3,32,32)
+const headMat = new THREE.MeshPhongMaterial({color:0xffcc99})
+
+const head = new THREE.Mesh(headGeo,headMat)
+head.position.set(0,1.8,0)
+
+scene.add(head)
+
+/* バット */
+
+const batGeo = new THREE.CylinderGeometry(0.05,0.05,1.5)
+const batMat = new THREE.MeshPhongMaterial({color:0x8b4513})
+
+const bat = new THREE.Mesh(batGeo,batMat)
+bat.rotation.z = Math.PI/2
+bat.position.set(0.8,1.2,0)
+
+scene.add(bat)
+
+/* 投球 */
+
+let pitching = true
 
 function pitch(){
 
-posX=10
-posY=180
-
-let types=["ストレート","カーブ","フォーク"]
-type=types[Math.floor(Math.random()*3)]
-
-if(type=="ストレート"){
-vx=9
-vy=(Math.random()-0.5)*2
-}
-
-if(type=="カーブ"){
-vx=7
-vy=2
-}
-
-if(type=="フォーク"){
-vx=7
-vy=4
-}
-
-document.getElementById("result").innerText="球種："+type
-
-moveBall()
-
-}
-
-function moveBall(){
-
-let move=setInterval(()=>{
-
-posX+=vx
-posY+=vy
-
-if(type=="カーブ"){
-vy+=0.15
-}
-
-ball.style.left=posX+"px"
-ball.style.top=posY+"px"
-
-if(posX>620){
-
-clearInterval(move)
-
-outs++
-atbat++
-
-update()
-
-document.getElementById("result").innerText="見逃し！"
-
-check()
-
-}
-
-window.pitchMove=move
-
-},30)
-
-}
-
-function swing(){
-
-let rectBall=ball.getBoundingClientRect()
-let rectCursor=cursor.getBoundingClientRect()
-
-let dx=(rectBall.left+8)-(rectCursor.left+25)
-let dy=(rectBall.top+8)-(rectCursor.top+25)
-
-let dist=Math.sqrt(dx*dx+dy*dy)
-
-if(dist<30){
-
-let r=Math.random()
-
-if(r<0.25){
-
-document.getElementById("result").innerText="🔥ホームラン！🔥"
-
-clearInterval(window.pitchMove)
-
-let fly=setInterval(()=>{
-
-posX+=10
-posY-=5
-
-ball.style.left=posX+"px"
-ball.style.top=posY+"px"
-
-if(posY<0){
-clearInterval(fly)
-}
-
-},30)
-
-hits++
-atbat++
-
-}
-
-else{
-
-document.getElementById("result").innerText="ヒット！"
-hits++
-atbat++
-
-}
-
-}
-
-else{
-
-document.getElementById("result").innerText="空振り！"
-outs++
-atbat++
-
-}
-
-update()
-
-check()
-
-}
-
-function update(){
-
-document.getElementById("hits").innerText=hits
-document.getElementById("outs").innerText=outs
-document.getElementById("atbat").innerText=atbat
-
-let avg=hits/atbat
-
-if(atbat==0) avg=0
-
-document.getElementById("avg").innerText=avg.toFixed(3)
-
-}
-
-function check(){
-
-if(outs>=3){
-
-document.getElementById("result").innerText="ゲーム終了！"
-
-setTimeout(()=>{
-
-hits=0
-outs=0
-atbat=0
-
-update()
-
-document.getElementById("result").innerText="もう一度プレイ！"
-
-},2000)
-
-}
+ball.position.set(0,1,-8)
+pitching=true
 
 }
 
 setInterval(pitch,3000)
+
+/* スイング */
+
+function swing(){
+
+bat.rotation.z = Math.PI/2 + 0.8
+
+setTimeout(()=>{
+bat.rotation.z = Math.PI/2
+},200)
+
+let dist = ball.position.distanceTo(batterBody.position)
+
+if(dist < 1){
+
+document.getElementById("result").innerText="ヒット！"
+
+}
+
+else{
+
+document.getElementById("result").innerText="空振り"
+
+}
+
+}
+
+/* アニメーション */
+
+function animate(){
+
+requestAnimationFrame(animate)
+
+if(pitching){
+
+ball.position.z += 0.15
+
+/* ボール回転 */
+
+ball.rotation.x += 0.3
+ball.rotation.y += 0.2
+
+if(ball.position.z > 1){
+
+pitching=false
+
+}
+
+}
+
+renderer.render(scene,camera)
+
+}
+
+animate()
 
 </script>
 
