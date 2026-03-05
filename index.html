@@ -2,10 +2,9 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>競馬育成ゲーム</title>
+<title>競馬ゲーム</title>
 
 <style>
-
 body{
 margin:0;
 background:#2b8a3e;
@@ -52,7 +51,6 @@ font-size:18px;
 #ui{
 margin-top:20px;
 }
-
 </style>
 </head>
 
@@ -64,24 +62,19 @@ margin-top:20px;
 
 <br><br>
 
-🐎 自分の馬  
-スピード: <span id="speedStat">5</span>  
-スタミナ: <span id="staminaStat">5</span>
-
-<br><br>
-
 賭ける馬:
-<select id="betHorse"></select>
+<select id="betHorse">
+<option value="0">1番</option>
+<option value="1">2番</option>
+<option value="2">3番</option>
+<option value="3">4番</option>
+</select>
 
 賭け金:
 <input id="betMoney" type="number" value="100">
 
 <button id="start">レース開始</button>
 
-<button onclick="trainSpeed()">スピード育成</button>
-<button onclick="trainStamina()">スタミナ育成</button>
-
-<div id="odds"></div>
 <div id="result"></div>
 
 </div>
@@ -99,107 +92,16 @@ margin-top:20px;
 let money=1000
 
 let horses=[
-{el:horse0,pos:0,speed:1,stamina:5},
-{el:horse1,pos:0,speed:1,stamina:5},
-{el:horse2,pos:0,speed:1,stamina:5},
-{el:horse3,pos:0,speed:1,stamina:5}
+{el:document.getElementById("horse0"),pos:0,speed:0},
+{el:document.getElementById("horse1"),pos:0,speed:0},
+{el:document.getElementById("horse2"),pos:0,speed:0},
+{el:document.getElementById("horse3"),pos:0,speed:0}
 ]
-
-let playerHorse=0
-
-let speedStat=5
-let staminaStat=5
-
-function updateStats(){
-
-speedStat=Math.min(speedStat,20)
-staminaStat=Math.min(staminaStat,20)
-
-document.getElementById("speedStat").textContent=speedStat
-document.getElementById("staminaStat").textContent=staminaStat
-
-}
-
-function trainSpeed(){
-
-if(money>=100){
-money-=100
-speedStat++
-updateMoney()
-updateStats()
-}
-
-}
-
-function trainStamina(){
-
-if(money>=100){
-money-=100
-staminaStat++
-updateMoney()
-updateStats()
-}
-
-}
-
-function updateMoney(){
-document.getElementById("money").textContent=money
-}
-
-function setupRace(){
-
-horses.forEach((h,i)=>{
-
-h.pos=0
-
-if(i===playerHorse){
-h.speed=0.8+speedStat*0.1
-h.stamina=staminaStat
-}else{
-h.speed=0.8+Math.random()*2
-h.stamina=5+Math.random()*10
-}
-
-h.odds=(3+(Math.random()*4)).toFixed(1)
-
-})
-
-updateOdds()
-
-}
-
-function updateOdds(){
-
-let oddsHTML="📊 オッズ<br>"
-
-horses.forEach((h,i)=>{
-oddsHTML+=(i+1)+"番 : "+h.odds+"倍<br>"
-})
-
-document.getElementById("odds").innerHTML=oddsHTML
-
-let select=document.getElementById("betHorse")
-
-select.innerHTML=""
-
-horses.forEach((h,i)=>{
-
-let op=document.createElement("option")
-op.value=i
-op.textContent=(i+1)+"番"
-
-select.appendChild(op)
-
-})
-
-}
 
 document.getElementById("start").onclick=()=>{
 
-setupRace()
-
-let betHorse=parseInt(betHorse.value)
-let bet=parseInt(betMoney.value)
+let betHorse=parseInt(document.getElementById("betHorse").value)
+let bet=parseInt(document.getElementById("betMoney").value)
 
 if(bet>money){
 alert("お金が足りない")
@@ -207,18 +109,20 @@ return
 }
 
 money-=bet
-updateMoney()
+document.getElementById("money").textContent=money
+
+horses.forEach(h=>{
+h.pos=0
+h.speed=Math.random()*2+1
+})
 
 let finish=false
 
-function update(){
+function race(){
 
 horses.forEach((h,i)=>{
 
-let fatigue=Math.max(0.3,1-(h.pos/800)/h.stamina)
-
-h.pos+=h.speed*fatigue
-
+h.pos+=h.speed
 h.el.style.left=h.pos+"px"
 
 if(h.pos>window.innerWidth-120 && !finish){
@@ -227,33 +131,34 @@ finish=true
 
 if(i===betHorse){
 
-let win=Math.floor(bet*h.odds)
-
+let win=bet*3
 money+=win
 
-result.textContent="🎉 的中！ "+win+"円"
+document.getElementById("result").textContent=
+"🎉的中！ "+win+"円"
 
 }else{
 
-result.textContent="ハズレ！ 勝ったのは "+(i+1)+"番"
+document.getElementById("result").textContent=
+"ハズレ！ 勝ったのは "+(i+1)+"番"
 
 }
 
-updateMoney()
+document.getElementById("money").textContent=money
 
 }
 
 })
 
-if(!finish) requestAnimationFrame(update)
+if(!finish){
+requestAnimationFrame(race)
+}
 
 }
 
-update()
+race()
 
 }
-
-updateStats()
 
 </script>
 
