@@ -1,188 +1,251 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html>
 <head>
 <meta charset="UTF-8">
-<title>3D 野球ゲーム</title>
+<title>3D Baseball Batting</title>
 
 <style>
-
 body{
 margin:0;
-overflow:hidden;
-background:#87ceeb;
+background:black;
+color:white;
 font-family:sans-serif;
+text-align:center;
+overflow:hidden;
 }
 
 #ui{
 position:absolute;
 top:10px;
-left:10px;
-color:white;
-background:rgba(0,0,0,0.5);
-padding:10px;
-border-radius:10px;
+left:50%;
+transform:translateX(-50%);
+font-size:20px;
 }
 
-button{
-padding:10px 20px;
-font-size:16px;
-margin-top:5px;
+#cursor{
+position:absolute;
+width:80px;
+height:80px;
+border:3px solid yellow;
+border-radius:50%;
+pointer-events:none;
+transform:translate(-40px,-40px);
 }
 
+canvas{
+display:block;
+}
 </style>
 </head>
 
 <body>
 
 <div id="ui">
-⚾ 3D野球デモ<br>
-<button onclick="swing()">スイング</button><br>
-<span id="result">投球待ち</span>
+⚾ Pitch: <span id="type">-</span>  
+📊 Hits: <span id="hits">0</span> / <span id="atbat">0</span>  
+AVG: <span id="avg">0.000</span>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<div id="cursor"></div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 
 <script>
 
-const scene = new THREE.Scene()
+let scene = new THREE.Scene();
+let camera = new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,1000);
+let renderer = new THREE.WebGLRenderer({antialias:true});
 
-const camera = new THREE.PerspectiveCamera(
-60,
-window.innerWidth/window.innerHeight,
-0.1,
-1000
-)
+renderer.setSize(innerWidth,innerHeight);
+document.body.appendChild(renderer.domElement);
 
-camera.position.set(0,3,8)
+camera.position.set(0,2,8);
 
-const renderer = new THREE.WebGLRenderer()
-renderer.setSize(window.innerWidth,window.innerHeight)
-document.body.appendChild(renderer.domElement)
+let light = new THREE.DirectionalLight(0xffffff,1);
+light.position.set(5,10,5);
+scene.add(light);
 
-const light = new THREE.DirectionalLight(0xffffff,1)
-light.position.set(5,10,5)
-scene.add(light)
+let ambient = new THREE.AmbientLight(0xffffff,0.6);
+scene.add(ambient);
 
-const ambient = new THREE.AmbientLight(0xffffff,0.6)
-scene.add(ambient)
+let ground = new THREE.Mesh(
+new THREE.PlaneGeometry(50,50),
+new THREE.MeshPhongMaterial({color:0x1a7a1a})
+);
+ground.rotation.x = -Math.PI/2;
+scene.add(ground);
 
-/* 地面 */
+let stand = new THREE.Mesh(
+new THREE.BoxGeometry(50,10,5),
+new THREE.MeshPhongMaterial({color:0x444444})
+);
+stand.position.set(0,5,-20);
+scene.add(stand);
 
-const groundGeo = new THREE.PlaneGeometry(20,20)
-const groundMat = new THREE.MeshPhongMaterial({color:0x2e8b57})
-const ground = new THREE.Mesh(groundGeo,groundMat)
+let batter = new THREE.Group();
 
-ground.rotation.x = -Math.PI/2
-scene.add(ground)
+let body = new THREE.Mesh(
+new THREE.BoxGeometry(1,2,0.5),
+new THREE.MeshPhongMaterial({color:0xffffff})
+);
+body.position.y=1;
 
-/* ボール */
+let head = new THREE.Mesh(
+new THREE.SphereGeometry(0.4,32,32),
+new THREE.MeshPhongMaterial({color:0xffcc99})
+);
+head.position.y=2.4;
 
-const ballGeo = new THREE.SphereGeometry(0.2,32,32)
-const ballMat = new THREE.MeshPhongMaterial({color:0xffffff})
+let bat = new THREE.Mesh(
+new THREE.CylinderGeometry(0.1,0.1,3),
+new THREE.MeshPhongMaterial({color:0x8b4513})
+);
+bat.rotation.z = Math.PI/4;
+bat.position.set(1,1.2,0);
 
-const ball = new THREE.Mesh(ballGeo,ballMat)
-ball.position.set(0,1,-8)
+batter.add(body);
+batter.add(head);
+batter.add(bat);
 
-scene.add(ball)
+batter.position.set(0,0,2);
+scene.add(batter);
 
-/* バッター（簡易3Dモデル） */
+let ballGeo = new THREE.SphereGeometry(0.2,32,32);
+let ballMat = new THREE.MeshPhongMaterial({color:"white"});
+let ball = new THREE.Mesh(ballGeo,ballMat);
 
-const bodyGeo = new THREE.BoxGeometry(0.6,1.5,0.4)
-const bodyMat = new THREE.MeshPhongMaterial({color:0x0000ff})
+scene.add(ball);
 
-const batterBody = new THREE.Mesh(bodyGeo,bodyMat)
-batterBody.position.set(0,0.8,0)
+let pitchType="";
+let speed=0;
+let curve=0;
+let fork=0;
 
-scene.add(batterBody)
+let hits=0;
+let atbat=0;
 
-/* 頭 */
+function updateStats(){
 
-const headGeo = new THREE.SphereGeometry(0.3,32,32)
-const headMat = new THREE.MeshPhongMaterial({color:0xffcc99})
+document.getElementById("hits").textContent=hits;
+document.getElementById("atbat").textContent=atbat;
 
-const head = new THREE.Mesh(headGeo,headMat)
-head.position.set(0,1.8,0)
+let avg=atbat?hits/atbat:0;
 
-scene.add(head)
+document.getElementById("avg").textContent=avg.toFixed(3);
 
-/* バット */
-
-const batGeo = new THREE.CylinderGeometry(0.05,0.05,1.5)
-const batMat = new THREE.MeshPhongMaterial({color:0x8b4513})
-
-const bat = new THREE.Mesh(batGeo,batMat)
-bat.rotation.z = Math.PI/2
-bat.position.set(0.8,1.2,0)
-
-scene.add(bat)
-
-/* 投球 */
-
-let pitching = true
+}
 
 function pitch(){
 
-ball.position.set(0,1,-8)
-pitching=true
+ball.position.set(0,1,-15);
+
+let r=Math.random();
+
+if(r<0.33){
+
+pitchType="ストレート";
+speed=0.5;
+curve=0;
+fork=0;
+
+}else if(r<0.66){
+
+pitchType="カーブ";
+speed=0.45;
+curve=0.02;
+fork=0;
+
+}else{
+
+pitchType="フォーク";
+speed=0.45;
+curve=0;
+fork=0.02;
 
 }
 
-setInterval(pitch,3000)
+document.getElementById("type").textContent=pitchType;
 
-/* スイング */
+}
+
+pitch();
+
+let cursorX=0;
+let cursorY=0;
+
+document.addEventListener("mousemove",e=>{
+
+cursorX=(e.clientX/innerWidth)*6-3;
+cursorY=(e.clientY/innerHeight)*3;
+
+document.getElementById("cursor").style.left=e.clientX+"px";
+document.getElementById("cursor").style.top=e.clientY+"px";
+
+});
+
+document.addEventListener("click",swing);
 
 function swing(){
 
-bat.rotation.z = Math.PI/2 + 0.8
+atbat++;
 
-setTimeout(()=>{
-bat.rotation.z = Math.PI/2
-},200)
+let dx=ball.position.x-cursorX;
+let dy=ball.position.y-cursorY;
 
-let dist = ball.position.distanceTo(batterBody.position)
+let dist=Math.sqrt(dx*dx+dy*dy);
 
-if(dist < 1){
+if(dist<0.7){
 
-document.getElementById("result").innerText="ヒット！"
+hits++;
+
+ball.userData.hit=true;
+
+ball.userData.vx=(Math.random()-0.5)*0.5;
+ball.userData.vy=0.3+Math.random()*0.3;
+ball.userData.vz=0.8;
+
+}else{
+
+ball.userData.hit=false;
 
 }
 
-else{
-
-document.getElementById("result").innerText="空振り"
+updateStats();
 
 }
-
-}
-
-/* アニメーション */
 
 function animate(){
 
-requestAnimationFrame(animate)
+requestAnimationFrame(animate);
 
-if(pitching){
+if(!ball.userData.hit){
 
-ball.position.z += 0.15
+ball.position.z+=speed;
+ball.position.x+=curve;
+ball.position.y-=fork;
 
-/* ボール回転 */
+}else{
 
-ball.rotation.x += 0.3
-ball.rotation.y += 0.2
+ball.position.x+=ball.userData.vx;
+ball.position.y+=ball.userData.vy;
+ball.position.z+=ball.userData.vz;
 
-if(ball.position.z > 1){
-
-pitching=false
-
-}
-
-}
-
-renderer.render(scene,camera)
+ball.rotation.x+=0.3;
+ball.rotation.y+=0.3;
 
 }
 
-animate()
+if(ball.position.z>3){
+
+pitch();
+
+}
+
+renderer.render(scene,camera);
+
+}
+
+animate();
 
 </script>
 
