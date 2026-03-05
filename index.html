@@ -1,1 +1,328 @@
-a
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>野球ミニゲーム</title>
+
+<style>
+
+body{
+margin:0;
+font-family:sans-serif;
+background:linear-gradient(#87ceeb,#2e8b57);
+text-align:center;
+color:white;
+}
+
+h1{
+margin:10px;
+}
+
+.game{
+width:700px;
+margin:auto;
+background:rgba(0,0,0,0.6);
+padding:20px;
+border-radius:15px;
+}
+
+#field{
+width:640px;
+height:360px;
+margin:auto;
+position:relative;
+overflow:hidden;
+border:4px solid white;
+border-radius:10px;
+background:
+radial-gradient(circle at center bottom,#c2b280 0 60px,transparent 60px),
+linear-gradient(#3cb043,#2e8b57);
+}
+
+/* 外野フェンス */
+
+#fence{
+position:absolute;
+top:0;
+width:100%;
+height:70px;
+background:#1c5f33;
+}
+
+/* ボール */
+
+#ball{
+width:16px;
+height:16px;
+background:white;
+border-radius:50%;
+position:absolute;
+left:10px;
+top:180px;
+}
+
+/* ミートカーソル */
+
+#cursor{
+width:50px;
+height:50px;
+border:3px solid yellow;
+border-radius:50%;
+position:absolute;
+pointer-events:none;
+}
+
+/* スコア */
+
+.scoreboard{
+margin-top:10px;
+font-size:18px;
+}
+
+#result{
+margin-top:10px;
+font-size:22px;
+font-weight:bold;
+}
+
+button{
+margin-top:10px;
+padding:12px 25px;
+font-size:18px;
+border:none;
+border-radius:10px;
+background:#ffd700;
+cursor:pointer;
+}
+
+button:hover{
+background:#ffcc00;
+}
+
+</style>
+</head>
+
+<body>
+
+<h1>⚾ 野球ミニゲーム ⚾</h1>
+
+<div class="game">
+
+<div id="field">
+
+<div id="fence"></div>
+<div id="ball"></div>
+<div id="cursor"></div>
+
+</div>
+
+<button onclick="swing()">スイング</button>
+
+<div class="scoreboard">
+
+ヒット: <span id="hits">0</span> |
+アウト: <span id="outs">0</span> |
+打席: <span id="atbat">0</span> |
+打率: <span id="avg">0.000</span>
+
+</div>
+
+<div id="result">ピッチャーが投げるぞ！</div>
+
+</div>
+
+<script>
+
+let field=document.getElementById("field")
+let ball=document.getElementById("ball")
+let cursor=document.getElementById("cursor")
+
+let hits=0
+let outs=0
+let atbat=0
+
+let posX=10
+let posY=180
+let type=""
+
+let vx=0
+let vy=0
+
+field.addEventListener("mousemove",(e)=>{
+
+let rect=field.getBoundingClientRect()
+
+cursor.style.left=(e.clientX-rect.left-25)+"px"
+cursor.style.top=(e.clientY-rect.top-25)+"px"
+
+})
+
+function pitch(){
+
+posX=10
+posY=180
+
+let types=["ストレート","カーブ","フォーク"]
+type=types[Math.floor(Math.random()*3)]
+
+if(type=="ストレート"){
+vx=9
+vy=(Math.random()-0.5)*2
+}
+
+if(type=="カーブ"){
+vx=7
+vy=2
+}
+
+if(type=="フォーク"){
+vx=7
+vy=4
+}
+
+document.getElementById("result").innerText="球種："+type
+
+moveBall()
+
+}
+
+function moveBall(){
+
+let move=setInterval(()=>{
+
+posX+=vx
+posY+=vy
+
+if(type=="カーブ"){
+vy+=0.15
+}
+
+ball.style.left=posX+"px"
+ball.style.top=posY+"px"
+
+if(posX>620){
+
+clearInterval(move)
+
+outs++
+atbat++
+
+update()
+
+document.getElementById("result").innerText="見逃し！"
+
+check()
+
+}
+
+window.pitchMove=move
+
+},30)
+
+}
+
+function swing(){
+
+let rectBall=ball.getBoundingClientRect()
+let rectCursor=cursor.getBoundingClientRect()
+
+let dx=(rectBall.left+8)-(rectCursor.left+25)
+let dy=(rectBall.top+8)-(rectCursor.top+25)
+
+let dist=Math.sqrt(dx*dx+dy*dy)
+
+if(dist<30){
+
+let r=Math.random()
+
+if(r<0.25){
+
+document.getElementById("result").innerText="🔥ホームラン！🔥"
+
+clearInterval(window.pitchMove)
+
+let fly=setInterval(()=>{
+
+posX+=10
+posY-=5
+
+ball.style.left=posX+"px"
+ball.style.top=posY+"px"
+
+if(posY<0){
+clearInterval(fly)
+}
+
+},30)
+
+hits++
+atbat++
+
+}
+
+else{
+
+document.getElementById("result").innerText="ヒット！"
+hits++
+atbat++
+
+}
+
+}
+
+else{
+
+document.getElementById("result").innerText="空振り！"
+outs++
+atbat++
+
+}
+
+update()
+
+check()
+
+}
+
+function update(){
+
+document.getElementById("hits").innerText=hits
+document.getElementById("outs").innerText=outs
+document.getElementById("atbat").innerText=atbat
+
+let avg=hits/atbat
+
+if(atbat==0) avg=0
+
+document.getElementById("avg").innerText=avg.toFixed(3)
+
+}
+
+function check(){
+
+if(outs>=3){
+
+document.getElementById("result").innerText="ゲーム終了！"
+
+setTimeout(()=>{
+
+hits=0
+outs=0
+atbat=0
+
+update()
+
+document.getElementById("result").innerText="もう一度プレイ！"
+
+},2000)
+
+}
+
+}
+
+setInterval(pitch,3000)
+
+</script>
+
+</body>
+</html>
