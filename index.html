@@ -2,250 +2,258 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>3D Baseball Batting</title>
+<title>競馬育成ゲーム</title>
 
 <style>
+
 body{
 margin:0;
-background:black;
-color:white;
+background:#2b8a3e;
 font-family:sans-serif;
+color:white;
 text-align:center;
-overflow:hidden;
+}
+
+.track{
+position:absolute;
+top:260px;
+left:50px;
+width:90%;
+height:200px;
+background:#b8860b;
+border-radius:100px;
+}
+
+.goal{
+position:absolute;
+right:20px;
+top:240px;
+width:10px;
+height:260px;
+background:white;
+}
+
+.horse{
+position:absolute;
+width:60px;
+height:30px;
+border-radius:10px;
+}
+
+#horse0{background:red;top:280px;}
+#horse1{background:blue;top:320px;}
+#horse2{background:yellow;top:360px;}
+#horse3{background:white;top:400px;}
+
+button,input,select{
+font-size:18px;
 }
 
 #ui{
-position:absolute;
-top:10px;
-left:50%;
-transform:translateX(-50%);
-font-size:20px;
+margin-top:20px;
 }
 
-#cursor{
-position:absolute;
-width:80px;
-height:80px;
-border:3px solid yellow;
-border-radius:50%;
-pointer-events:none;
-transform:translate(-40px,-40px);
-}
-
-canvas{
-display:block;
-}
 </style>
 </head>
 
 <body>
 
 <div id="ui">
-⚾ Pitch: <span id="type">-</span>  
-📊 Hits: <span id="hits">0</span> / <span id="atbat">0</span>  
-AVG: <span id="avg">0.000</span>
+
+💰 所持金: <span id="money">1000</span>
+
+<br><br>
+
+🐎 自分の馬  
+スピード: <span id="speedStat">5</span>  
+スタミナ: <span id="staminaStat">5</span>
+
+<br><br>
+
+賭ける馬:
+<select id="betHorse"></select>
+
+賭け金:
+<input id="betMoney" type="number" value="100">
+
+<button id="start">レース開始</button>
+
+<button onclick="trainSpeed()">スピード育成</button>
+<button onclick="trainStamina()">スタミナ育成</button>
+
+<div id="odds"></div>
+<div id="result"></div>
+
 </div>
 
-<div id="cursor"></div>
+<div class="track"></div>
+<div class="goal"></div>
 
-<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<div id="horse0" class="horse"></div>
+<div id="horse1" class="horse"></div>
+<div id="horse2" class="horse"></div>
+<div id="horse3" class="horse"></div>
 
 <script>
 
-let scene = new THREE.Scene();
-let camera = new THREE.PerspectiveCamera(60,innerWidth/innerHeight,0.1,1000);
-let renderer = new THREE.WebGLRenderer({antialias:true});
+let money=1000
 
-renderer.setSize(innerWidth,innerHeight);
-document.body.appendChild(renderer.domElement);
+let horses=[
+{el:horse0,pos:0,speed:1,stamina:5},
+{el:horse1,pos:0,speed:1,stamina:5},
+{el:horse2,pos:0,speed:1,stamina:5},
+{el:horse3,pos:0,speed:1,stamina:5}
+]
 
-camera.position.set(0,2,8);
+let playerHorse=0
 
-let light = new THREE.DirectionalLight(0xffffff,1);
-light.position.set(5,10,5);
-scene.add(light);
-
-let ambient = new THREE.AmbientLight(0xffffff,0.6);
-scene.add(ambient);
-
-let ground = new THREE.Mesh(
-new THREE.PlaneGeometry(50,50),
-new THREE.MeshPhongMaterial({color:0x1a7a1a})
-);
-ground.rotation.x = -Math.PI/2;
-scene.add(ground);
-
-let stand = new THREE.Mesh(
-new THREE.BoxGeometry(50,10,5),
-new THREE.MeshPhongMaterial({color:0x444444})
-);
-stand.position.set(0,5,-20);
-scene.add(stand);
-
-let batter = new THREE.Group();
-
-let body = new THREE.Mesh(
-new THREE.BoxGeometry(1,2,0.5),
-new THREE.MeshPhongMaterial({color:0xffffff})
-);
-body.position.y=1;
-
-let head = new THREE.Mesh(
-new THREE.SphereGeometry(0.4,32,32),
-new THREE.MeshPhongMaterial({color:0xffcc99})
-);
-head.position.y=2.4;
-
-let bat = new THREE.Mesh(
-new THREE.CylinderGeometry(0.1,0.1,3),
-new THREE.MeshPhongMaterial({color:0x8b4513})
-);
-bat.rotation.z = Math.PI/4;
-bat.position.set(1,1.2,0);
-
-batter.add(body);
-batter.add(head);
-batter.add(bat);
-
-batter.position.set(0,0,2);
-scene.add(batter);
-
-let ballGeo = new THREE.SphereGeometry(0.2,32,32);
-let ballMat = new THREE.MeshPhongMaterial({color:"white"});
-let ball = new THREE.Mesh(ballGeo,ballMat);
-
-scene.add(ball);
-
-let pitchType="";
-let speed=0;
-let curve=0;
-let fork=0;
-
-let hits=0;
-let atbat=0;
+let speedStat=5
+let staminaStat=5
 
 function updateStats(){
 
-document.getElementById("hits").textContent=hits;
-document.getElementById("atbat").textContent=atbat;
+speedStat=Math.min(speedStat,20)
+staminaStat=Math.min(staminaStat,20)
 
-let avg=atbat?hits/atbat:0;
-
-document.getElementById("avg").textContent=avg.toFixed(3);
+document.getElementById("speedStat").textContent=speedStat
+document.getElementById("staminaStat").textContent=staminaStat
 
 }
 
-function pitch(){
+function trainSpeed(){
 
-ball.position.set(0,1,-15);
+if(money>=100){
+money-=100
+speedStat++
+updateMoney()
+updateStats()
+}
 
-let r=Math.random();
+}
 
-if(r<0.33){
+function trainStamina(){
 
-pitchType="ストレート";
-speed=0.5;
-curve=0;
-fork=0;
+if(money>=100){
+money-=100
+staminaStat++
+updateMoney()
+updateStats()
+}
 
-}else if(r<0.66){
+}
 
-pitchType="カーブ";
-speed=0.45;
-curve=0.02;
-fork=0;
+function updateMoney(){
+document.getElementById("money").textContent=money
+}
+
+function setupRace(){
+
+horses.forEach((h,i)=>{
+
+h.pos=0
+
+if(i===playerHorse){
+h.speed=0.8+speedStat*0.1
+h.stamina=staminaStat
+}else{
+h.speed=0.8+Math.random()*2
+h.stamina=5+Math.random()*10
+}
+
+h.odds=(3+(Math.random()*4)).toFixed(1)
+
+})
+
+updateOdds()
+
+}
+
+function updateOdds(){
+
+let oddsHTML="📊 オッズ<br>"
+
+horses.forEach((h,i)=>{
+oddsHTML+=(i+1)+"番 : "+h.odds+"倍<br>"
+})
+
+document.getElementById("odds").innerHTML=oddsHTML
+
+let select=document.getElementById("betHorse")
+
+select.innerHTML=""
+
+horses.forEach((h,i)=>{
+
+let op=document.createElement("option")
+op.value=i
+op.textContent=(i+1)+"番"
+
+select.appendChild(op)
+
+})
+
+}
+
+document.getElementById("start").onclick=()=>{
+
+setupRace()
+
+let betHorse=parseInt(betHorse.value)
+let bet=parseInt(betMoney.value)
+
+if(bet>money){
+alert("お金が足りない")
+return
+}
+
+money-=bet
+updateMoney()
+
+let finish=false
+
+function update(){
+
+horses.forEach((h,i)=>{
+
+let fatigue=Math.max(0.3,1-(h.pos/800)/h.stamina)
+
+h.pos+=h.speed*fatigue
+
+h.el.style.left=h.pos+"px"
+
+if(h.pos>window.innerWidth-120 && !finish){
+
+finish=true
+
+if(i===betHorse){
+
+let win=Math.floor(bet*h.odds)
+
+money+=win
+
+result.textContent="🎉 的中！ "+win+"円"
 
 }else{
 
-pitchType="フォーク";
-speed=0.45;
-curve=0;
-fork=0.02;
+result.textContent="ハズレ！ 勝ったのは "+(i+1)+"番"
 
 }
 
-document.getElementById("type").textContent=pitchType;
+updateMoney()
 
 }
 
-pitch();
+})
 
-let cursorX=0;
-let cursorY=0;
-
-document.addEventListener("mousemove",e=>{
-
-cursorX=(e.clientX/innerWidth)*6-3;
-cursorY=(e.clientY/innerHeight)*3;
-
-document.getElementById("cursor").style.left=e.clientX+"px";
-document.getElementById("cursor").style.top=e.clientY+"px";
-
-});
-
-document.addEventListener("click",swing);
-
-function swing(){
-
-atbat++;
-
-let dx=ball.position.x-cursorX;
-let dy=ball.position.y-cursorY;
-
-let dist=Math.sqrt(dx*dx+dy*dy);
-
-if(dist<0.7){
-
-hits++;
-
-ball.userData.hit=true;
-
-ball.userData.vx=(Math.random()-0.5)*0.5;
-ball.userData.vy=0.3+Math.random()*0.3;
-ball.userData.vz=0.8;
-
-}else{
-
-ball.userData.hit=false;
+if(!finish) requestAnimationFrame(update)
 
 }
 
-updateStats();
+update()
 
 }
 
-function animate(){
-
-requestAnimationFrame(animate);
-
-if(!ball.userData.hit){
-
-ball.position.z+=speed;
-ball.position.x+=curve;
-ball.position.y-=fork;
-
-}else{
-
-ball.position.x+=ball.userData.vx;
-ball.position.y+=ball.userData.vy;
-ball.position.z+=ball.userData.vz;
-
-ball.rotation.x+=0.3;
-ball.rotation.y+=0.3;
-
-}
-
-if(ball.position.z>3){
-
-pitch();
-
-}
-
-renderer.render(scene,camera);
-
-}
-
-animate();
+updateStats()
 
 </script>
 
