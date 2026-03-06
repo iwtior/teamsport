@@ -28,7 +28,7 @@ left:10px;
 background:rgba(0,0,0,0.7);
 padding:12px;
 border-radius:10px;
-width:230px;
+width:260px;
 text-align:left;
 }
 
@@ -72,7 +72,8 @@ let money=1000
 let horses=[]
 let race=false
 
-const colors=["red","blue","yellow","purple","orange","gold"]
+const colors=["red","blue","yellow","purple","orange","cyan"]
+const traits=["逃げ","先行","差し","追込"]
 
 function createHorses(){
 
@@ -80,9 +81,15 @@ horses=[]
 
 for(let i=0;i<6;i++){
 
+let speed=3+Math.random()*1.5
+let stamina=3+Math.random()*3
+let trait=traits[Math.floor(Math.random()*traits.length)]
+
 horses.push({
 
-speed:3+Math.random()*1.5,
+baseSpeed:speed,
+stamina:stamina,
+trait:trait,
 progress:0,
 color:colors[i],
 odd:1
@@ -104,7 +111,7 @@ let oddsHTML=""
 
 horses.forEach((h,i)=>{
 
-let odd=(15/h.speed).toFixed(2)
+let odd=(20/(h.baseSpeed+h.stamina)).toFixed(2)
 h.odd=odd
 
 let option=document.createElement("option")
@@ -113,7 +120,12 @@ option.text="馬"+(i+1)+" ("+h.color+")"
 
 select.appendChild(option)
 
-oddsHTML+=`<div>馬${i+1} (${h.color}) : ${odd}倍</div>`
+oddsHTML+=`<div>
+馬${i+1} (${h.color})  
+特性:${h.trait}  
+スタミナ:${h.stamina.toFixed(1)}  
+オッズ:${odd}倍
+</div>`
 
 })
 
@@ -165,6 +177,57 @@ createHorses()
 
 }
 
+function getSpeed(h){
+
+let p=h.progress
+let speed=h.baseSpeed
+
+// 特性による動き
+if(h.trait==="逃げ"){
+if(p>0.6)speed*=0.7
+}
+
+if(h.trait==="先行"){
+speed*=1
+}
+
+if(h.trait==="差し"){
+if(p>0.6)speed*=1.4
+}
+
+if(h.trait==="追込"){
+if(p>0.75)speed*=1.8
+}
+
+// スタミナ影響
+if(p>0.7){
+speed*=h.stamina/5
+}
+
+return speed
+
+}
+
+function update(){
+
+if(!race)return
+
+horses.forEach((h,i)=>{
+
+let speed=(getSpeed(h)*0.0003)+(Math.random()*0.00015)
+
+h.progress+=speed
+
+if(h.progress>=1){
+
+finishRace(i)
+
+}
+
+})
+
+}
+
 function drawTrack(){
 
 ctx.lineWidth=50
@@ -193,26 +256,6 @@ ctx.fillRect(x+10,y-4,8,8)
 ctx.fillRect(x-8,y+6,3,8)
 ctx.fillRect(x,y+6,3,8)
 ctx.fillRect(x+6,y+6,3,8)
-
-}
-
-function update(){
-
-if(!race)return
-
-horses.forEach((h,i)=>{
-
-let speed=(h.speed*0.0003)+(Math.random()*0.0002)
-
-h.progress+=speed
-
-if(h.progress>=1){
-
-finishRace(i)
-
-}
-
-})
 
 }
 
