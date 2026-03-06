@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>リアル競馬ゲーム</title>
+<title>競馬ゲーム</title>
 
 <style>
 
@@ -26,9 +26,10 @@ position:absolute;
 top:10px;
 left:10px;
 background:rgba(0,0,0,0.7);
-padding:10px;
+padding:12px;
 border-radius:10px;
 text-align:left;
+width:220px;
 }
 
 button{
@@ -36,6 +37,11 @@ padding:8px 14px;
 margin-top:6px;
 font-size:16px;
 cursor:pointer;
+}
+
+select,input{
+width:100%;
+margin-top:5px;
 }
 
 </style>
@@ -47,17 +53,27 @@ cursor:pointer;
 
 <div>💰所持金: <span id="money">1000</span></div>
 
-<div>🐎自分の馬</div>
-スピード <span id="speed">5</span><br>
-スタミナ <span id="stamina">5</span><br>
+<hr>
 
-<button onclick="train()">育成</button>
-<br><br>
+🐎賭ける馬
+<select id="betHorse"></select>
 
-<div>🎲オッズ</div>
+💰賭け金
+<input id="betMoney" type="number" value="100">
+
 <div id="odds"></div>
 
 <button onclick="startRace()">レース開始</button>
+
+<hr>
+
+<div>
+自分の馬<br>
+Speed <span id="speed">5</span><br>
+Stamina <span id="stamina">5</span>
+</div>
+
+<button onclick="train()">育成 (100)</button>
 
 </div>
 
@@ -65,30 +81,30 @@ cursor:pointer;
 
 <script>
 
-const canvas = document.getElementById("game")
-const ctx = canvas.getContext("2d")
+const canvas=document.getElementById("game")
+const ctx=canvas.getContext("2d")
 
 let money=1000
 
 let playerHorse={
 speed:5,
-stamina:5,
-lap:0,
-progress:0
+stamina:5
 }
 
 let horses=[]
+
+let race=false
 
 function createHorses(){
 
 horses=[]
 
-for(let i=0;i<6;i++){
+for(let i=0;i<5;i++){
 
 horses.push({
 
-speed:4+Math.random()*3,
-stamina:4+Math.random()*3,
+speed:4+Math.random()*2,
+stamina:4+Math.random()*2,
 progress:0,
 lap:0,
 color:"hsl("+Math.random()*360+",70%,50%)",
@@ -98,68 +114,75 @@ player:false
 
 }
 
-playerHorse.progress=0
-playerHorse.lap=0
-
 horses.push({
-...playerHorse,
+
+speed:playerHorse.speed,
+stamina:playerHorse.stamina,
+progress:0,
+lap:0,
 color:"gold",
 player:true
+
 })
 
 }
 
-createHorses()
+function updateUI(){
+
+document.getElementById("money").innerText=money
+document.getElementById("speed").innerText=playerHorse.speed.toFixed(1)
+document.getElementById("stamina").innerText=playerHorse.stamina.toFixed(1)
+
+}
 
 function train(){
 
 if(money>=100){
 
 money-=100
-
-playerHorse.speed+=0.5
-playerHorse.stamina+=0.5
-
-}
-
-updateUI()
-
-}
-
-function updateUI(){
-
-document.getElementById("money").innerText=Math.floor(money)
-document.getElementById("speed").innerText=playerHorse.speed.toFixed(1)
-document.getElementById("stamina").innerText=playerHorse.stamina.toFixed(1)
+playerHorse.speed+=0.3
+playerHorse.stamina+=0.3
 
 }
 
 updateUI()
-
-let race=false
-
-function startRace(){
-
-createHorses()
-race=true
-
-generateOdds()
 
 }
 
 function generateOdds(){
 
 let html=""
+let select=document.getElementById("betHorse")
+
+select.innerHTML=""
 
 horses.forEach((h,i)=>{
 
-let o=(10/(h.speed+h.stamina)).toFixed(2)
+let odd=(10/(h.speed+h.stamina)).toFixed(2)
 
-html+="馬"+(i+1)+" : "+o+"倍<br>"
+html+=`<div>馬${i+1} (${h.color}) : ${odd}倍</div>`
+
+let option=document.createElement("option")
+option.value=i
+option.text="馬"+(i+1)
+
+select.appendChild(option)
+
+h.odd=odd
 
 })
 
 document.getElementById("odds").innerHTML=html
+
+}
+
+function startRace(){
+
+createHorses()
+
+generateOdds()
+
+race=true
 
 }
 
@@ -175,7 +198,7 @@ ctx.beginPath()
 ctx.ellipse(cx,cy,320,160,0,0,Math.PI*2)
 ctx.stroke()
 
-ctx.lineWidth=4
+ctx.lineWidth=3
 ctx.strokeStyle="white"
 
 ctx.beginPath()
@@ -188,13 +211,9 @@ function drawHorse(x,y,color){
 
 ctx.fillStyle=color
 
-// body
 ctx.fillRect(x-12,y-6,24,12)
-
-// head
 ctx.fillRect(x+12,y-4,8,8)
 
-// legs
 ctx.fillRect(x-10,y+6,3,8)
 ctx.fillRect(x-2,y+6,3,8)
 ctx.fillRect(x+6,y+6,3,8)
@@ -207,7 +226,7 @@ if(!race)return
 
 horses.forEach(h=>{
 
-let speed=(h.speed*0.002)+(Math.random()*0.002)
+let speed=(h.speed*0.0008)+(Math.random()*0.0006)
 
 h.progress+=speed
 
@@ -231,15 +250,20 @@ finishRace(h)
 
 function finishRace(winner){
 
-if(winner.player){
+let betHorse=parseInt(document.getElementById("betHorse").value)
+let betMoney=parseInt(document.getElementById("betMoney").value)
 
-money+=500
+if(betHorse===horses.indexOf(winner)){
 
-}
+money+=Math.floor(betMoney*winner.odd)
 
-else{
+alert("的中！ "+Math.floor(betMoney*winner.odd)+"円")
 
-money-=200
+}else{
+
+money-=betMoney
+
+alert("ハズレ")
 
 }
 
@@ -247,8 +271,8 @@ horses.forEach(h=>{
 
 if(!h.player){
 
-h.speed+=Math.random()*0.3
-h.stamina+=Math.random()*0.3
+h.speed+=Math.random()*0.2
+h.stamina+=Math.random()*0.2
 
 }
 
@@ -276,6 +300,9 @@ let y=cy+Math.sin(angle)*160
 
 drawHorse(x,y,h.color)
 
+ctx.fillStyle="white"
+ctx.fillText(i+1,x-3,y-12)
+
 })
 
 }
@@ -288,6 +315,8 @@ draw()
 requestAnimationFrame(loop)
 
 }
+
+updateUI()
 
 loop()
 
