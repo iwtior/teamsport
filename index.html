@@ -41,6 +41,14 @@ padding:10px;
 border-radius:10px;
 }
 
+#odds{
+height:200px;
+overflow-y:auto;
+border:1px solid white;
+padding:10px;
+margin-top:10px;
+}
+
 button,input,select{
 margin-top:6px;
 padding:6px;
@@ -84,7 +92,7 @@ padding:6px;
 賭け金
 <input id="betMoney" type="number" value="100">
 
-<h3>単勝オッズ</h3>
+<h3>オッズ表</h3>
 <div id="odds"></div>
 
 <br>
@@ -196,22 +204,7 @@ s.appendChild(o)
 
 })
 
-let oddsHTML=""
-
-horses.forEach((h,i)=>{
-
-oddsHTML+=`
-馬${i+1} (${h.color})<br>
-Speed:${h.speed.toFixed(1)}
-Stamina:${h.stamina.toFixed(1)}
-Sprint:${h.sprint.toFixed(1)}
-単勝:${h.odd}倍
-<hr>
-`
-
-})
-
-odds.innerHTML=oddsHTML
+updateOddsTable()
 
 moneyDisplay.innerText=money
 
@@ -234,6 +227,77 @@ horse2div.style.display="block"
 horse3div.style.display="block"
 
 }
+
+updateOddsTable()
+
+}
+
+function updateOddsTable(){
+
+let type=betType.value
+let html=""
+
+if(type==="win"){
+
+horses.forEach((h,i)=>{
+
+html+=`馬${i+1} : ${h.odd}倍<br>`
+
+})
+
+}
+
+if(type==="trio"){
+
+html+="三連複オッズ<br><hr>"
+
+for(let i=0;i<6;i++){
+for(let j=i+1;j<6;j++){
+for(let k=j+1;k<6;k++){
+
+let avg=
+(parseFloat(horses[i].odd)+
+parseFloat(horses[j].odd)+
+parseFloat(horses[k].odd))/3
+
+let odd=(avg*4).toFixed(1)
+
+html+=`${i+1}-${j+1}-${k+1} : ${odd}倍<br>`
+
+}
+}
+}
+
+}
+
+if(type==="trifecta"){
+
+html+="三連単オッズ<br><hr>"
+
+for(let i=0;i<6;i++){
+for(let j=0;j<6;j++){
+for(let k=0;k<6;k++){
+
+if(i!==j && j!==k && i!==k){
+
+let avg=
+(parseFloat(horses[i].odd)+
+parseFloat(horses[j].odd)+
+parseFloat(horses[k].odd))/3
+
+let odd=(avg*8).toFixed(1)
+
+html+=`${i+1}→${j+1}→${k+1} : ${odd}倍<br>`
+
+}
+
+}
+}
+}
+
+}
+
+odds.innerHTML=html
 
 }
 
@@ -300,7 +364,6 @@ money-=bet
 let win=false
 let multiplier=0
 
-// 単勝
 if(type==="win"){
 
 if(finishOrder[0]===h1){
@@ -312,7 +375,6 @@ multiplier=parseFloat(horses[h1].odd)
 
 }
 
-// 三連複
 if(type==="trio"){
 
 let betSet=[h1,h2,h3].sort()
@@ -322,18 +384,17 @@ if(JSON.stringify(betSet)===JSON.stringify(result)){
 
 win=true
 
-let avgOdd=
+let avg=
 (parseFloat(horses[h1].odd)+
- parseFloat(horses[h2].odd)+
- parseFloat(horses[h3].odd))/3
+parseFloat(horses[h2].odd)+
+parseFloat(horses[h3].odd))/3
 
-multiplier=avgOdd*4
-
-}
+multiplier=avg*4
 
 }
 
-// 三連単
+}
+
 if(type==="trifecta"){
 
 if(
@@ -344,12 +405,12 @@ finishOrder[2]===h3
 
 win=true
 
-let avgOdd=
+let avg=
 (parseFloat(horses[h1].odd)+
- parseFloat(horses[h2].odd)+
- parseFloat(horses[h3].odd))/3
+parseFloat(horses[h2].odd)+
+parseFloat(horses[h3].odd))/3
 
-multiplier=avgOdd*8
+multiplier=avg*8
 
 }
 
