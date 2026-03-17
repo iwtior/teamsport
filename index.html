@@ -84,7 +84,7 @@ padding:6px;
 賭け金
 <input id="betMoney" type="number" value="100">
 
-<h3>オッズ</h3>
+<h3>単勝オッズ</h3>
 <div id="odds"></div>
 
 <br>
@@ -111,6 +111,8 @@ padding:6px;
 <h2>🏁 レース結果</h2>
 
 <div id="resultTable"></div>
+
+<br>
 
 <div id="payout"></div>
 
@@ -200,10 +202,10 @@ horses.forEach((h,i)=>{
 
 oddsHTML+=`
 馬${i+1} (${h.color})<br>
-Speed:${h.speed.toFixed(1)}  
-Stamina:${h.stamina.toFixed(1)}  
-Sprint:${h.sprint.toFixed(1)}  
-単勝オッズ:${h.odd}倍
+Speed:${h.speed.toFixed(1)}
+Stamina:${h.stamina.toFixed(1)}
+Sprint:${h.sprint.toFixed(1)}
+単勝:${h.odd}倍
 <hr>
 `
 
@@ -298,17 +300,19 @@ money-=bet
 let win=false
 let multiplier=0
 
+// 単勝
 if(type==="win"){
 
 if(finishOrder[0]===h1){
 
 win=true
-multiplier=horses[h1].odd
+multiplier=parseFloat(horses[h1].odd)
 
 }
 
 }
 
+// 三連複
 if(type==="trio"){
 
 let betSet=[h1,h2,h3].sort()
@@ -317,12 +321,19 @@ let result=[finishOrder[0],finishOrder[1],finishOrder[2]].sort()
 if(JSON.stringify(betSet)===JSON.stringify(result)){
 
 win=true
-multiplier=20
+
+let avgOdd=
+(parseFloat(horses[h1].odd)+
+ parseFloat(horses[h2].odd)+
+ parseFloat(horses[h3].odd))/3
+
+multiplier=avgOdd*4
 
 }
 
 }
 
+// 三連単
 if(type==="trifecta"){
 
 if(
@@ -332,7 +343,13 @@ finishOrder[2]===h3
 ){
 
 win=true
-multiplier=50
+
+let avgOdd=
+(parseFloat(horses[h1].odd)+
+ parseFloat(horses[h2].odd)+
+ parseFloat(horses[h3].odd))/3
+
+multiplier=avgOdd*8
 
 }
 
@@ -346,7 +363,7 @@ money+=payout
 
 moneyDisplay.innerText=money
 
-return "🎉 的中！ "+payout+"円"
+return "🎉 的中！ "+payout+"円 (オッズ "+multiplier.toFixed(1)+"倍)"
 
 }
 
