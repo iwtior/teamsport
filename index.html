@@ -21,12 +21,12 @@ margin:auto;
 border:4px solid white;
 }
 
-.screen{display:none;}
-
-#betScreen{
-display:block;
+.screen{
+display:none;
 padding:20px;
 }
+
+#betScreen{display:block;}
 
 #raceScreen{
 position:relative;
@@ -41,7 +41,7 @@ padding:10px;
 border-radius:10px;
 }
 
-select,input,button{
+button,input,select{
 margin-top:6px;
 padding:6px;
 }
@@ -51,11 +51,11 @@ padding:6px;
 
 <body>
 
-<div id="betScreen">
+<div id="betScreen" class="screen">
 
 <h2>🐎 ベット画面</h2>
 
-💰所持金: <span id="money">1000</span><br>
+💰所持金: <span id="moneyDisplay">2000</span><br>
 
 券種
 <select id="betType" onchange="updateBetUI()">
@@ -64,7 +64,7 @@ padding:6px;
 <option value="trifecta">三連単</option>
 </select>
 
-<div id="horseSelect">
+<br>
 
 馬1
 <select id="horse1"></select>
@@ -79,18 +79,22 @@ padding:6px;
 <select id="horse3"></select>
 </div>
 
-</div>
+<br>
 
 賭け金
 <input id="betMoney" type="number" value="100">
 
+<h3>オッズ</h3>
 <div id="odds"></div>
+
+<br>
 
 <button onclick="startRace()">レース開始</button>
 
 </div>
 
-<div id="raceScreen">
+
+<div id="raceScreen" class="screen">
 
 <canvas id="game" width="900" height="500"></canvas>
 
@@ -101,29 +105,41 @@ padding:6px;
 
 </div>
 
+
+<div id="resultScreen" class="screen">
+
+<h2>🏁 レース結果</h2>
+
+<div id="resultTable"></div>
+
+<div id="payout"></div>
+
+<br>
+
+<button onclick="nextRace()">次のレース</button>
+
+</div>
+
+
 <script>
 
 const canvas=document.getElementById("game")
 const ctx=canvas.getContext("2d")
 
-let money=1000
+let money=2000
 let horses=[]
 let race=false
 let finishOrder=[]
 
 const colors=["red","blue","yellow","purple","orange","cyan"]
 
-function showBet(){
-
-betScreen.style.display="block"
-raceScreen.style.display="none"
-
-}
-
-function showRace(){
+function showScreen(name){
 
 betScreen.style.display="none"
-raceScreen.style.display="block"
+raceScreen.style.display="none"
+resultScreen.style.display="none"
+
+document.getElementById(name).style.display="block"
 
 }
 
@@ -137,13 +153,17 @@ let speed=3+Math.random()*2
 let stamina=3+Math.random()*3
 let sprint=3+Math.random()*3
 
+let power=speed+stamina+sprint
+let odd=(20/power).toFixed(2)
+
 horses.push({
 
 speed:speed,
 stamina:stamina,
 sprint:sprint,
 progress:0,
-color:colors[i]
+color:colors[i],
+odd:odd
 
 })
 
@@ -178,21 +198,20 @@ let oddsHTML=""
 
 horses.forEach((h,i)=>{
 
-let power=h.speed+h.stamina+h.sprint
-let odd=(30/power).toFixed(2)
-
 oddsHTML+=`
 馬${i+1} (${h.color})<br>
-Speed:${h.speed.toFixed(1)}
-Stamina:${h.stamina.toFixed(1)}
-Sprint:${h.sprint.toFixed(1)}
-オッズ:${odd}倍
+Speed:${h.speed.toFixed(1)}  
+Stamina:${h.stamina.toFixed(1)}  
+Sprint:${h.sprint.toFixed(1)}  
+単勝オッズ:${h.odd}倍
 <hr>
 `
 
 })
 
 odds.innerHTML=oddsHTML
+
+moneyDisplay.innerText=money
 
 updateBetUI()
 
@@ -229,7 +248,8 @@ return
 
 finishOrder=[]
 
-showRace()
+showScreen("raceScreen")
+
 race=true
 
 }
@@ -241,9 +261,25 @@ finishOrder.push(index)
 if(finishOrder.length===3){
 
 race=false
-checkBet()
+showResult()
 
 }
+
+}
+
+function showResult(){
+
+let table=""
+
+table+=`🥇1着 馬${finishOrder[0]+1}<br>`
+table+=`🥈2着 馬${finishOrder[1]+1}<br>`
+table+=`🥉3着 馬${finishOrder[2]+1}<br>`
+
+resultTable.innerHTML=table
+
+payout.innerHTML=checkBet()
+
+showScreen("resultScreen")
 
 }
 
@@ -260,10 +296,16 @@ let bet=parseInt(betMoney.value)
 money-=bet
 
 let win=false
+let multiplier=0
 
 if(type==="win"){
 
-if(finishOrder[0]===h1) win=true
+if(finishOrder[0]===h1){
+
+win=true
+multiplier=horses[h1].odd
+
+}
 
 }
 
@@ -272,36 +314,53 @@ if(type==="trio"){
 let betSet=[h1,h2,h3].sort()
 let result=[finishOrder[0],finishOrder[1],finishOrder[2]].sort()
 
-win=JSON.stringify(betSet)===JSON.stringify(result)
+if(JSON.stringify(betSet)===JSON.stringify(result)){
+
+win=true
+multiplier=20
+
+}
 
 }
 
 if(type==="trifecta"){
 
-win=
+if(
 finishOrder[0]===h1 &&
 finishOrder[1]===h2 &&
 finishOrder[2]===h3
+){
+
+win=true
+multiplier=50
+
+}
 
 }
 
 if(win){
 
-let payout=bet*5
+let payout=Math.floor(bet*multiplier)
+
 money+=payout
-alert("🎉的中 "+payout+"円")
 
-}else{
+moneyDisplay.innerText=money
 
-alert("ハズレ")
+return "🎉 的中！ "+payout+"円"
 
 }
 
 moneyDisplay.innerText=money
 
+return "ハズレ"
+
+}
+
+function nextRace(){
+
 createHorses()
 
-showBet()
+showScreen("betScreen")
 
 }
 
@@ -430,7 +489,7 @@ requestAnimationFrame(loop)
 }
 
 createHorses()
-showBet()
+showScreen("betScreen")
 loop()
 
 </script>
