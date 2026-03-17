@@ -48,14 +48,7 @@ margin-top:20px;
 width:40%;
 }
 
-#odds{
-height:250px;
-overflow-y:auto;
-border:1px solid white;
-padding:10px;
-}
-
-#horseStats{
+#odds,#horseStats{
 height:250px;
 overflow-y:auto;
 border:1px solid white;
@@ -71,7 +64,6 @@ padding:6px;
 
 <body>
 
-<!-- ベット画面 -->
 <div id="betScreen" class="screen">
 
 <h2>🐎 ベット画面</h2>
@@ -87,33 +79,27 @@ padding:6px;
 
 <br>
 
-馬1
-<select id="horse1"></select>
+馬1 <select id="horse1"></select>
 
 <div id="horse2div">
-馬2
-<select id="horse2"></select>
+馬2 <select id="horse2"></select>
 </div>
 
 <div id="horse3div">
-馬3
-<select id="horse3"></select>
+馬3 <select id="horse3"></select>
 </div>
 
 <br>
 
-賭け金
-<input id="betMoney" type="number" value="100">
+賭け金 <input id="betMoney" type="number" value="100">
 
 <div class="flex">
 
-<!-- 左：能力 -->
 <div class="box">
 <h3>🐎 馬能力</h3>
 <div id="horseStats"></div>
 </div>
 
-<!-- 右：オッズ -->
 <div class="box">
 <h3>📊 オッズ表</h3>
 <div id="odds"></div>
@@ -127,33 +113,22 @@ padding:6px;
 
 </div>
 
-<!-- レース画面 -->
 <div id="raceScreen" class="screen">
-
 <canvas id="game" width="900" height="500"></canvas>
 
 <div id="rank">
 順位
 <div id="rankList"></div>
 </div>
-
 </div>
 
-<!-- 結果画面 -->
 <div id="resultScreen" class="screen">
-
 <h2>🏁 レース結果</h2>
-
 <div id="resultTable"></div>
-
 <br>
-
 <div id="payout"></div>
-
 <br>
-
 <button onclick="nextRace()">次のレース</button>
-
 </div>
 
 <script>
@@ -167,6 +142,10 @@ let race=false
 let finishOrder=[]
 
 const colors=["red","blue","yellow","purple","orange","cyan"]
+
+const traitsList=[
+"逃げ","差し","スタミナ型","瞬発型","安定型"
+]
 
 function showScreen(name){
 betScreen.style.display="none"
@@ -185,14 +164,17 @@ let speed=3+Math.random()*2
 let stamina=3+Math.random()*3
 let sprint=3+Math.random()*3
 
+let trait=traitsList[Math.floor(Math.random()*traitsList.length)]
+
 let power=speed+stamina+sprint
 let odd=(20/power).toFixed(2)
 
 horses.push({
-speed, stamina, sprint,
+speed,stamina,sprint,
 progress:0,
 color:colors[i],
-odd:odd
+odd:odd,
+trait:trait
 })
 
 }
@@ -229,6 +211,7 @@ let html=""
 horses.forEach((h,i)=>{
 html+=`
 馬${i+1} (${h.color})<br>
+特性: ${h.trait}<br>
 Speed: ${h.speed.toFixed(1)}<br>
 Stamina: ${h.stamina.toFixed(1)}<br>
 Sprint: ${h.sprint.toFixed(1)}<br>
@@ -263,56 +246,54 @@ let type=betType.value
 let html=""
 
 if(type==="win"){
-
 horses.forEach((h,i)=>{
 html+=`馬${i+1} : ${h.odd}倍<br>`
 })
-
 }
 
 if(type==="trio"){
-
 html+="三連複<br><hr>"
-
 for(let i=0;i<6;i++){
 for(let j=i+1;j<6;j++){
 for(let k=j+1;k<6;k++){
-
-let avg=(parseFloat(horses[i].odd)+parseFloat(horses[j].odd)+parseFloat(horses[k].odd))/3
-let odd=(avg*4).toFixed(1)
-
-html+=`${i+1}-${j+1}-${k+1} : ${odd}倍<br>`
-
+let avg=(horses[i].odd*1+horses[j].odd*1+horses[k].odd*1)/3
+html+=`${i+1}-${j+1}-${k+1} : ${(avg*4).toFixed(1)}倍<br>`
 }
 }
 }
-
 }
 
 if(type==="trifecta"){
-
 html+="三連単<br><hr>"
-
 for(let i=0;i<6;i++){
 for(let j=0;j<6;j++){
 for(let k=0;k<6;k++){
-
 if(i!==j && j!==k && i!==k){
-
-let avg=(parseFloat(horses[i].odd)+parseFloat(horses[j].odd)+parseFloat(horses[k].odd))/3
-let odd=(avg*8).toFixed(1)
-
-html+=`${i+1}→${j+1}→${k+1} : ${odd}倍<br>`
-
-}
-
+let avg=(horses[i].odd*1+horses[j].odd*1+horses[k].odd*1)/3
+html+=`${i+1}→${j+1}→${k+1} : ${(avg*8).toFixed(1)}倍<br>`
 }
 }
 }
-
+}
 }
 
 odds.innerHTML=html
+
+}
+
+function getSpeed(h){
+
+let p=h.progress
+let speed=h.speed
+
+// 特性反映
+if(h.trait==="逃げ" && p<0.3) speed+=1
+if(h.trait==="差し" && p>0.6) speed+=1.5
+if(h.trait==="スタミナ型" && p>0.6) speed*=1.2
+if(h.trait==="瞬発型" && p>0.75) speed+=2
+if(h.trait==="安定型") speed+=0.3
+
+return speed
 
 }
 
@@ -331,15 +312,12 @@ race=true
 
 }
 
-function finishRace(index){
-
-finishOrder.push(index)
-
+function finishRace(i){
+finishOrder.push(i)
 if(finishOrder.length===3){
 race=false
 showResult()
 }
-
 }
 
 function showResult(){
@@ -367,43 +345,36 @@ let bet=+betMoney.value
 money-=bet
 
 let win=false
-let multiplier=0
+let mult=0
 
 if(type==="win"){
 if(finishOrder[0]===h1){
 win=true
-multiplier=parseFloat(horses[h1].odd)
+mult=horses[h1].odd
 }
 }
 
 if(type==="trio"){
-
-let betSet=[h1,h2,h3].sort()
-let res=[finishOrder[0],finishOrder[1],finishOrder[2]].sort()
-
-if(JSON.stringify(betSet)===JSON.stringify(res)){
+let a=[h1,h2,h3].sort()
+let b=[finishOrder[0],finishOrder[1],finishOrder[2]].sort()
+if(JSON.stringify(a)==JSON.stringify(b)){
 win=true
-let avg=(horses[h1].odd*1+horses[h2].odd*1+horses[h3].odd*1)/3
-multiplier=avg*4
+mult=((horses[h1].odd*1+horses[h2].odd*1+horses[h3].odd*1)/3)*4
 }
-
 }
 
 if(type==="trifecta"){
-
-if(finishOrder[0]===h1 && finishOrder[1]===h2 && finishOrder[2]===h3){
+if(finishOrder[0]===h1&&finishOrder[1]===h2&&finishOrder[2]===h3){
 win=true
-let avg=(horses[h1].odd*1+horses[h2].odd*1+horses[h3].odd*1)/3
-multiplier=avg*8
+mult=((horses[h1].odd*1+horses[h2].odd*1+horses[h3].odd*1)/3)*8
 }
-
 }
 
 if(win){
-let pay=Math.floor(bet*multiplier)
+let pay=Math.floor(bet*mult)
 money+=pay
 moneyDisplay.innerText=money
-return `🎉 的中！ ${pay}円（${multiplier.toFixed(1)}倍）`
+return `🎉 的中！ ${pay}円（${mult.toFixed(1)}倍）`
 }
 
 moneyDisplay.innerText=money
@@ -416,18 +387,6 @@ createHorses()
 showScreen("betScreen")
 }
 
-function getSpeed(h){
-
-let p=h.progress
-let speed=h.speed
-
-if(p>0.7) speed+=h.sprint
-if(p>0.6) speed*=h.stamina/5
-
-return speed
-
-}
-
 function update(){
 
 if(!race)return
@@ -438,7 +397,7 @@ let speed=(getSpeed(h)*0.0003)+(Math.random()*0.00015)
 
 h.progress+=speed
 
-if(h.progress>=1 && !finishOrder.includes(i)){
+if(h.progress>=1&&!finishOrder.includes(i)){
 finishRace(i)
 }
 
