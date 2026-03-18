@@ -223,10 +223,8 @@ html+="三連複<br><hr>"
 for(let i=0;i<6;i++){
 for(let j=i+1;j<6;j++){
 for(let k=j+1;k<6;k++){
-
 let avg=(horses[i].odd*1+horses[j].odd*1+horses[k].odd*1)/3
 let odd=((avg*8)+Math.pow(avg,1.2)).toFixed(1)
-
 html+=`${i+1}-${j+1}-${k+1} : ${odd}倍<br>`
 }}}
 }
@@ -237,10 +235,8 @@ for(let i=0;i<6;i++){
 for(let j=0;j<6;j++){
 for(let k=0;k<6;k++){
 if(i!==j&&j!==k&&i!==k){
-
 let avg=(horses[i].odd*1+horses[j].odd*1+horses[k].odd*1)/3
 let odd=((avg*18)+Math.pow(avg,1.5)).toFixed(1)
-
 html+=`${i+1}→${j+1}→${k+1} : ${odd}倍<br>`
 }}}}
 }
@@ -413,13 +409,7 @@ ctx.beginPath()
 ctx.ellipse(0,12,16,5,0,0,Math.PI*2)
 ctx.fill()
 
-// グラデーション
-let grad=ctx.createLinearGradient(-12,0,12,0)
-grad.addColorStop(0,"black")
-grad.addColorStop(0.5,color)
-grad.addColorStop(1,"white")
-
-ctx.fillStyle=grad
+ctx.fillStyle=color
 
 // 胴体
 ctx.beginPath()
@@ -445,7 +435,7 @@ ctx.lineTo(-18,tail)
 ctx.lineTo(-14,2)
 ctx.fill()
 
-// 脚（速度で変化）
+// 脚
 let sp=getSpeed(h)
 let leg1=Math.sin(frame*0.4*sp)*6
 let leg2=Math.sin(frame*0.4*sp+Math.PI)*6
@@ -491,7 +481,6 @@ let y=250+Math.sin(angle)*160
 
 let dir=angle+Math.PI/2
 
-// サイズ変化
 let size=0.9 + h.speed*0.05
 
 ctx.save()
