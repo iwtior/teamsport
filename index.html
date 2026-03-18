@@ -2,7 +2,7 @@
 <html>
 <head>
 <meta charset="UTF-8">
-<title>競馬ゲーム</title>
+<title>競馬ゲーム 完全版</title>
 
 <style>
 body{
@@ -14,19 +14,14 @@ text-align:center;
 }
 
 canvas{
-background:#1c7c3a;
+background:linear-gradient(#2e8b57,#1c7c3a);
 display:block;
 margin:auto;
 border:4px solid white;
 }
 
-.screen{
-display:none;
-padding:20px;
-}
-
+.screen{display:none;padding:20px;}
 #betScreen{display:block;}
-
 #raceScreen{position:relative;}
 
 #rank{
@@ -44,21 +39,16 @@ justify-content:space-around;
 margin-top:20px;
 }
 
-.box{
-width:40%;
-}
+.box{width:40%;}
 
 #odds,#horseStats{
-height:250px;
+height:260px;
 overflow-y:auto;
 border:1px solid white;
 padding:10px;
 }
 
-button,input,select{
-margin-top:6px;
-padding:6px;
-}
+button,input,select{margin-top:6px;padding:6px;}
 </style>
 </head>
 
@@ -81,13 +71,18 @@ padding:6px;
 
 馬1 <select id="horse1"></select>
 
-<div id="horse2div">
-馬2 <select id="horse2"></select>
-</div>
+<div id="horse2div">馬2 <select id="horse2"></select></div>
+<div id="horse3div">馬3 <select id="horse3"></select></div>
 
-<div id="horse3div">
-馬3 <select id="horse3"></select>
-</div>
+<br>
+
+🎯 自分の馬の特性
+<select id="playerTrait">
+<option>逃げ</option>
+<option>先行</option>
+<option>差し</option>
+<option>追込</option>
+</select>
 
 <br>
 
@@ -108,7 +103,6 @@ padding:6px;
 </div>
 
 <br>
-
 <button onclick="startRace()">レース開始</button>
 
 </div>
@@ -140,12 +134,9 @@ let money=2000
 let horses=[]
 let race=false
 let finishOrder=[]
+let frame=0
 
 const colors=["red","blue","yellow","purple","orange","cyan"]
-
-const traitsList=[
-"逃げ","差し","スタミナ型","瞬発型","安定型"
-]
 
 function showScreen(name){
 betScreen.style.display="none"
@@ -164,7 +155,8 @@ let speed=3+Math.random()*2
 let stamina=3+Math.random()*3
 let sprint=3+Math.random()*3
 
-let trait=traitsList[Math.floor(Math.random()*traitsList.length)]
+let traits=["逃げ","先行","差し","追込"]
+let trait=traits[Math.floor(Math.random()*4)]
 
 let power=speed+stamina+sprint
 let odd=(20/power).toFixed(2)
@@ -180,7 +172,6 @@ trait:trait
 }
 
 setupUI()
-
 }
 
 function setupUI(){
@@ -198,16 +189,13 @@ s.appendChild(o)
 
 updateHorseStats()
 updateOddsTable()
-
 moneyDisplay.innerText=money
 updateBetUI()
-
 }
 
 function updateHorseStats(){
 
 let html=""
-
 horses.forEach((h,i)=>{
 html+=`
 馬${i+1} (${h.color})<br>
@@ -215,29 +203,20 @@ html+=`
 Speed: ${h.speed.toFixed(1)}<br>
 Stamina: ${h.stamina.toFixed(1)}<br>
 Sprint: ${h.sprint.toFixed(1)}<br>
-単勝: ${h.odd}倍
-<hr>
-`
+単勝: ${h.odd}倍<hr>`
 })
 
 horseStats.innerHTML=html
-
 }
 
 function updateBetUI(){
 
 let type=betType.value
 
-if(type==="win"){
-horse2div.style.display="none"
-horse3div.style.display="none"
-}else{
-horse2div.style.display="block"
-horse3div.style.display="block"
-}
+horse2div.style.display=(type==="win")?"none":"block"
+horse3div.style.display=(type==="win")?"none":"block"
 
 updateOddsTable()
-
 }
 
 function updateOddsTable(){
@@ -256,11 +235,12 @@ html+="三連複<br><hr>"
 for(let i=0;i<6;i++){
 for(let j=i+1;j<6;j++){
 for(let k=j+1;k<6;k++){
+
 let avg=(horses[i].odd*1+horses[j].odd*1+horses[k].odd*1)/3
-html+=`${i+1}-${j+1}-${k+1} : ${(avg*4).toFixed(1)}倍<br>`
-}
-}
-}
+let odd=((avg*8)+Math.pow(avg,1.2)).toFixed(1)
+
+html+=`${i+1}-${j+1}-${k+1} : ${odd}倍<br>`
+}}}
 }
 
 if(type==="trifecta"){
@@ -268,17 +248,16 @@ html+="三連単<br><hr>"
 for(let i=0;i<6;i++){
 for(let j=0;j<6;j++){
 for(let k=0;k<6;k++){
-if(i!==j && j!==k && i!==k){
+if(i!==j&&j!==k&&i!==k){
+
 let avg=(horses[i].odd*1+horses[j].odd*1+horses[k].odd*1)/3
-html+=`${i+1}→${j+1}→${k+1} : ${(avg*8).toFixed(1)}倍<br>`
-}
-}
-}
-}
+let odd=((avg*18)+Math.pow(avg,1.5)).toFixed(1)
+
+html+=`${i+1}→${j+1}→${k+1} : ${odd}倍<br>`
+}}}}
 }
 
 odds.innerHTML=html
-
 }
 
 function getSpeed(h){
@@ -286,15 +265,24 @@ function getSpeed(h){
 let p=h.progress
 let speed=h.speed
 
-// 特性反映
-if(h.trait==="逃げ" && p<0.3) speed+=1
-if(h.trait==="差し" && p>0.6) speed+=1.5
-if(h.trait==="スタミナ型" && p>0.6) speed*=1.2
-if(h.trait==="瞬発型" && p>0.75) speed+=2
-if(h.trait==="安定型") speed+=0.3
+if(h.trait==="逃げ"){
+if(p<0.3) speed+=1.5
+if(p>0.7) speed-=0.5
+}
+
+if(h.trait==="先行"){
+if(p<0.6) speed+=0.8
+}
+
+if(h.trait==="差し"){
+if(p>0.5) speed+=1.2
+}
+
+if(h.trait==="追込"){
+if(p>0.7) speed+=2
+}
 
 return speed
-
 }
 
 function startRace(){
@@ -306,10 +294,13 @@ alert("お金不足")
 return
 }
 
+// 自分の馬に特性
+let playerIndex=+horse1.value
+horses[playerIndex].trait=playerTrait.value
+
 finishOrder=[]
 showScreen("raceScreen")
 race=true
-
 }
 
 function finishRace(i){
@@ -328,22 +319,18 @@ resultTable.innerHTML=
 🥉3着 馬${finishOrder[2]+1}`
 
 payout.innerHTML=checkBet()
-
 showScreen("resultScreen")
-
 }
 
 function checkBet(){
 
 let type=betType.value
-
 let h1=+horse1.value
 let h2=+horse2.value
 let h3=+horse3.value
 let bet=+betMoney.value
 
 money-=bet
-
 let win=false
 let mult=0
 
@@ -359,14 +346,16 @@ let a=[h1,h2,h3].sort()
 let b=[finishOrder[0],finishOrder[1],finishOrder[2]].sort()
 if(JSON.stringify(a)==JSON.stringify(b)){
 win=true
-mult=((horses[h1].odd*1+horses[h2].odd*1+horses[h3].odd*1)/3)*4
+let avg=(horses[h1].odd*1+horses[h2].odd*1+horses[h3].odd*1)/3
+mult=(avg*8)+Math.pow(avg,1.2)
 }
 }
 
 if(type==="trifecta"){
 if(finishOrder[0]===h1&&finishOrder[1]===h2&&finishOrder[2]===h3){
 win=true
-mult=((horses[h1].odd*1+horses[h2].odd*1+horses[h3].odd*1)/3)*8
+let avg=(horses[h1].odd*1+horses[h2].odd*1+horses[h3].odd*1)/3
+mult=(avg*18)+Math.pow(avg,1.5)
 }
 }
 
@@ -379,7 +368,6 @@ return `🎉 的中！ ${pay}円（${mult.toFixed(1)}倍）`
 
 moneyDisplay.innerText=money
 return "ハズレ"
-
 }
 
 function nextRace(){
@@ -394,7 +382,6 @@ if(!race)return
 horses.forEach((h,i)=>{
 
 let speed=(getSpeed(h)*0.0003)+(Math.random()*0.00015)
-
 h.progress+=speed
 
 if(h.progress>=1&&!finishOrder.includes(i)){
@@ -404,7 +391,6 @@ finishRace(i)
 })
 
 updateRank()
-
 }
 
 function updateRank(){
@@ -418,38 +404,60 @@ html+=`${i+1}位:馬${num}<br>`
 })
 
 rankList.innerHTML=html
-
 }
 
 function drawTrack(){
 
 ctx.lineWidth=50
 ctx.strokeStyle="#8B4513"
-
 ctx.beginPath()
 ctx.ellipse(450,250,320,160,0,0,Math.PI*2)
 ctx.stroke()
 
 ctx.lineWidth=3
 ctx.strokeStyle="white"
-
 ctx.beginPath()
 ctx.ellipse(450,250,320,160,0,0,Math.PI*2)
 ctx.stroke()
-
 }
 
-function drawHorse(x,y,color){
+function drawHorse(x,y,color,angle){
+
+ctx.save()
+ctx.translate(x,y)
+ctx.rotate(angle)
+
+ctx.fillStyle="rgba(0,0,0,0.3)"
+ctx.beginPath()
+ctx.ellipse(0,10,14,4,0,0,Math.PI*2)
+ctx.fill()
 
 ctx.fillStyle=color
 
-ctx.fillRect(x-10,y-6,20,12)
-ctx.fillRect(x+10,y-4,8,8)
+ctx.beginPath()
+ctx.ellipse(0,0,12,6,0,0,Math.PI*2)
+ctx.fill()
 
-ctx.fillRect(x-8,y+6,3,8)
-ctx.fillRect(x,y+6,3,8)
-ctx.fillRect(x+6,y+6,3,8)
+ctx.beginPath()
+ctx.ellipse(12,-2,5,4,0,0,Math.PI*2)
+ctx.fill()
 
+let leg=Math.sin(frame*0.3)*5
+
+ctx.strokeStyle=color
+ctx.lineWidth=3
+
+ctx.beginPath()
+ctx.moveTo(4,5)
+ctx.lineTo(4,10+leg)
+ctx.stroke()
+
+ctx.beginPath()
+ctx.moveTo(-4,5)
+ctx.lineTo(-4,10-leg)
+ctx.stroke()
+
+ctx.restore()
 }
 
 function draw(){
@@ -465,13 +473,16 @@ let angle=h.progress*2*Math.PI
 let x=450+Math.cos(angle)*320
 let y=250+Math.sin(angle)*160
 
-drawHorse(x,y,h.color)
+let dir=angle+Math.PI/2
+
+drawHorse(x,y,h.color,dir)
 
 ctx.fillStyle="white"
 ctx.fillText(i+1,x-4,y-12)
 
 })
 
+frame++
 }
 
 function loop(){
