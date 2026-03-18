@@ -70,19 +70,8 @@ button,input,select{margin-top:6px;padding:6px;}
 <br>
 
 馬1 <select id="horse1"></select>
-
 <div id="horse2div">馬2 <select id="horse2"></select></div>
 <div id="horse3div">馬3 <select id="horse3"></select></div>
-
-<br>
-
-🎯 自分の馬の特性
-<select id="playerTrait">
-<option>逃げ</option>
-<option>先行</option>
-<option>差し</option>
-<option>追込</option>
-</select>
 
 <br>
 
@@ -212,7 +201,6 @@ horseStats.innerHTML=html
 function updateBetUI(){
 
 let type=betType.value
-
 horse2div.style.display=(type==="win")?"none":"block"
 horse3div.style.display=(type==="win")?"none":"block"
 
@@ -288,15 +276,7 @@ return speed
 function startRace(){
 
 let bet=parseInt(betMoney.value)
-
-if(bet>money){
-alert("お金不足")
-return
-}
-
-// 自分の馬に特性
-let playerIndex=+horse1.value
-horses[playerIndex].trait=playerTrait.value
+if(bet>money){alert("お金不足");return}
 
 finishOrder=[]
 showScreen("raceScreen")
@@ -421,40 +401,76 @@ ctx.ellipse(450,250,320,160,0,0,Math.PI*2)
 ctx.stroke()
 }
 
-function drawHorse(x,y,color,angle){
+function drawHorse(x,y,color,angle,h){
 
 ctx.save()
 ctx.translate(x,y)
 ctx.rotate(angle)
 
-ctx.fillStyle="rgba(0,0,0,0.3)"
+// 影
+ctx.fillStyle="rgba(0,0,0,0.35)"
 ctx.beginPath()
-ctx.ellipse(0,10,14,4,0,0,Math.PI*2)
+ctx.ellipse(0,12,16,5,0,0,Math.PI*2)
 ctx.fill()
 
-ctx.fillStyle=color
+// グラデーション
+let grad=ctx.createLinearGradient(-12,0,12,0)
+grad.addColorStop(0,"black")
+grad.addColorStop(0.5,color)
+grad.addColorStop(1,"white")
 
+ctx.fillStyle=grad
+
+// 胴体
 ctx.beginPath()
-ctx.ellipse(0,0,12,6,0,0,Math.PI*2)
+ctx.ellipse(0,0,13,7,0,0,Math.PI*2)
 ctx.fill()
 
+// 首
+let neck=Math.sin(frame*0.2)*2
 ctx.beginPath()
-ctx.ellipse(12,-2,5,4,0,0,Math.PI*2)
+ctx.ellipse(10,-3+neck,5,4,0,0,Math.PI*2)
 ctx.fill()
 
-let leg=Math.sin(frame*0.3)*5
+// 頭
+ctx.beginPath()
+ctx.ellipse(15,-5+neck,4,3,0,0,Math.PI*2)
+ctx.fill()
+
+// しっぽ
+let tail=Math.sin(frame*0.3)*4
+ctx.beginPath()
+ctx.moveTo(-12,0)
+ctx.lineTo(-18,tail)
+ctx.lineTo(-14,2)
+ctx.fill()
+
+// 脚（速度で変化）
+let sp=getSpeed(h)
+let leg1=Math.sin(frame*0.4*sp)*6
+let leg2=Math.sin(frame*0.4*sp+Math.PI)*6
 
 ctx.strokeStyle=color
 ctx.lineWidth=3
 
 ctx.beginPath()
-ctx.moveTo(4,5)
-ctx.lineTo(4,10+leg)
+ctx.moveTo(5,6)
+ctx.lineTo(5,12+leg1)
 ctx.stroke()
 
 ctx.beginPath()
-ctx.moveTo(-4,5)
-ctx.lineTo(-4,10-leg)
+ctx.moveTo(2,6)
+ctx.lineTo(2,12+leg2)
+ctx.stroke()
+
+ctx.beginPath()
+ctx.moveTo(-3,6)
+ctx.lineTo(-3,12+leg2)
+ctx.stroke()
+
+ctx.beginPath()
+ctx.moveTo(-7,6)
+ctx.lineTo(-7,12+leg1)
 ctx.stroke()
 
 ctx.restore()
@@ -475,7 +491,15 @@ let y=250+Math.sin(angle)*160
 
 let dir=angle+Math.PI/2
 
-drawHorse(x,y,h.color,dir)
+// サイズ変化
+let size=0.9 + h.speed*0.05
+
+ctx.save()
+ctx.scale(size,size)
+
+drawHorse(x/size,y/size,h.color,dir,h)
+
+ctx.restore()
 
 ctx.fillStyle="white"
 ctx.fillText(i+1,x-4,y-12)
